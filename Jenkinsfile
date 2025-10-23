@@ -2,49 +2,29 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = 'demo-app'
-        DOCKER_IMAGE = "yourdockerhubusername/${APP_NAME}:latest"
-        KUBE_CONFIG = credentials('kubeconfig') // Add your Kubernetes kubeconfig as Jenkins credential
+        IMAGE_NAME = "demo-app"
+        IMAGE_TAG  = "latest"
     }
 
     stages {
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Install Dependencies & Test') {
-            steps {
-                sh 'npm install'
-                sh 'npm test'
+                git url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git', branch: 'main'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                docker build -t ${DOCKER_IMAGE} .
-                """
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push ${DOCKER_IMAGE}
-                    """
+                script {
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Run Docker Container') {
             steps {
-                withKubeConfig([credentialsId: 'kubeconfig']) {
-                    sh 'kubectl apply -f k8s/deployment.yaml'
-                    sh 'kubectl rollout status deployment/demo-app'
+                script {
+                    sh "docker run --rm ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
@@ -52,13 +32,10 @@ pipeline {
 
     post {
         always {
-            cleanWs()
-        }
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed.'
+            node {
+                cleanWs()
+            }
+            echo 'Pipeline finished.'
         }
     }
 }
