@@ -2,40 +2,54 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "demo-app"
-        IMAGE_TAG  = "latest"
+        DOCKER_IMAGE = "myapp:latest"
+        APP_NAME = "demo-app"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git', branch: 'main'
+                echo "Checking out code from GitHub..."
+                git branch: 'main', url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                }
+                echo "Building Docker image..."
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
         stage('Run Docker Container') {
             steps {
-                script {
-                    sh "docker run --rm ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
+                echo "Running Docker container..."
+                sh """
+                docker stop ${APP_NAME} || true
+                docker rm ${APP_NAME} || true
+                docker run -d --name ${APP_NAME} -p 8081:80 ${DOCKER_IMAGE}
+                """
+            }
+        }
+
+        stage('Test Container') {
+            steps {
+                echo "Checking running container..."
+                sh "docker ps | grep ${APP_NAME}"
             }
         }
     }
 
     post {
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
         always {
-            node {
-                cleanWs()
-            }
-            echo 'Pipeline finished.'
+            echo "Cleaning workspace..."
+            cleanWs()
         }
     }
 }
