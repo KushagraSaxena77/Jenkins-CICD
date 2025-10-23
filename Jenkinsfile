@@ -10,6 +10,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Checking out code from GitHub..."
+                deleteDir() // ensures workspace is clean
                 git branch: 'main', url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git'
             }
         }
