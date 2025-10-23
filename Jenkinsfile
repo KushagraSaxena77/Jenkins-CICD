@@ -9,8 +9,8 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo "Checking out code from GitHub..."
-                deleteDir() // ensures workspace is clean
+                echo "Cleaning workspace and checking out code..."
+                deleteDir() // ensures workspace is empty
                 git branch: 'main', url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git'
             }
         }
@@ -39,7 +39,7 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up Docker containers..."
+            echo "Cleaning up Docker container..."
             sh "docker rm -f ${CONTAINER_NAME} || true"
             cleanWs()
         }
