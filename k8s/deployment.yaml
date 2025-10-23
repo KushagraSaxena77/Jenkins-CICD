@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: demo-app
-        image: YOUR_DOCKERHUB_USER/demo-app:latest
+        image: kushagrasaxena77/demo-app:latest
         imagePullPolicy: IfNotPresent
         env:
         - name: APP_VERSION
