@@ -1,46 +1,64 @@
 pipeline {
-  agent any
-  environment {
-    REGISTRY = "kushagrasaxena77"
-    IMAGE = "${env.REGISTRY}/demo-app"
-  }
-  stages {
-    stage('Checkout') {
-      steps { 
-        checkout scm 
-      }
+    agent any
+
+    environment {
+        APP_NAME = 'demo-app'
+        DOCKER_IMAGE = "yourdockerhubusername/${APP_NAME}:latest"
+        KUBE_CONFIG = credentials('kubeconfig') // Add your Kubernetes kubeconfig as Jenkins credential
     }
-    stage('Build & Test') {
-      steps {
-        // Run Node.js container to install dependencies and test
-        sh 'docker run --rm -v $PWD:/app -w /app node:18 npm install'
-        sh 'docker run --rm -v $PWD:/app -w /app node:18 npm test'
-      }
+
+    stages {
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies & Test') {
+            steps {
+                sh 'npm install'
+                sh 'npm test'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t ${DOCKER_IMAGE} .
+                """
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push ${DOCKER_IMAGE}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    sh 'kubectl apply -f k8s/deployment.yaml'
+                    sh 'kubectl rollout status deployment/demo-app'
+                }
+            }
+        }
     }
-    stage('Build & Push Image') {
-      steps {
-        sh """
-          docker build -t ${IMAGE}:\$BUILD_NUMBER .
-          docker tag ${IMAGE}:\$BUILD_NUMBER ${IMAGE}:latest
-          docker push ${IMAGE}:\$BUILD_NUMBER
-          docker push ${IMAGE}:latest
-        """
-      }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
     }
-    stage('Deploy to Kubernetes') {
-      steps {
-        sh '''
-          # Replace image tag in deployment.yaml and apply
-          sed "s|YOUR_DOCKERHUB_USER/demo-app:latest|${IMAGE}:${BUILD_NUMBER}|g" k8s/deployment.yaml > k8s/tmp-deploy.yaml
-          kubectl apply -f k8s/tmp-deploy.yaml
-          kubectl rollout status deployment/demo-app --timeout=120s
-        '''
-      }
-    }
-  }
-  post {
-    always {
-      cleanWs()
-    }
-  }
 }
