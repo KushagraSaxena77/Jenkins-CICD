@@ -1,0 +1,11 @@
+{
+  "name": "demo-app",
+  "version": "0.1.0",
+  "description": "Minimal HTTP app used for CI/CD demo",
+  "main": "app/index.js",
+  "scripts": {
+    "start": "node app/index.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
