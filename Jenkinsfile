@@ -39,16 +39,20 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+        sh """
+          export PATH="/Users/kushagrasaxena/.jenkins:$PATH"
+          docker-wrapper.sh build -t ${IMAGE_NAME}:${IMAGE_TAG} ."""
       }
     }
 
     stage('Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
-          sh 'docker push ${IMAGE_NAME}:${IMAGE_TAG}'
-          sh 'docker logout || true'
+          sh """
+            export PATH="/Users/kushagrasaxena/.jenkins:$PATH"
+            echo \${DOCKER_PASS} | docker-wrapper.sh login -u \${DOCKER_USER} --password-stdin
+            docker-wrapper.sh push ${IMAGE_NAME}:${IMAGE_TAG}
+            docker-wrapper.sh logout || true"""
         }
       }
     }
