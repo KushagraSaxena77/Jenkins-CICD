@@ -1,23 +1,12 @@
 {
-<<<<<<< HEAD
   "name": "demo-app",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Minimal HTTP app used for CI/CD demo",
   "main": "app/index.js",
   "scripts": {
-    "start": "node app/index.js"
+    "start": "node app/index.js",
+    "test": "node -e \"console.log('tests ok')\""
   },
   "author": "",
   "license": "MIT"
 }
-=======
-    "name": "demo-app",
-    "version": "1.0.0",
-    "main": "index.js",
-    "scripts": {
-      "start": "node app/index.js",
-      "test": "node -e \"console.log('tests ok')\""
-    }
-  }
-  
->>>>>>> 9eac8d7a082bd601510aacec7907fc0f38a7e069
