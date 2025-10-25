@@ -8,7 +8,7 @@ pipeline {
     NAMESPACE = "${params.NAMESPACE ?: 'default'}"
   }
 
-  parameters {
+    parameters {
     string(name: 'IMAGE_NAME', defaultValue: 'kushagrasaxena77/demo-app', description: 'Full image name (e.g. user/repo)')
     string(name: 'IMAGE_TAG', defaultValue: '', description: 'Optional tag (defaults to short-git-sha-BUILD_NUMBER)')
     string(name: 'NAMESPACE', defaultValue: 'default', description: 'Kubernetes namespace')
@@ -42,9 +42,6 @@ pipeline {
     }
 
     stage('Push') {
-      environment {
-        // Expect a Username/Password credential with id 'docker-hub-credentials-id'
-      }
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh 'echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin'
@@ -85,10 +82,6 @@ pipeline {
   post {
     always {
       echo "Pipeline finished"
-      sh 'docker image prune -f || true'
-    }
-    failure {
-      echo "Pipeline failed. Check logs for details."
     }
   }
 }
