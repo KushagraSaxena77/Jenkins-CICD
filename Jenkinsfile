@@ -2,46 +2,89 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "myapp"
-        CONTAINER_NAME = "myapp_container"
+        IMAGE_NAME = "kushagrasaxena77/demo-app"
+        DOCKER_REGISTRY = "docker.io"
+        // Expects a Jenkins username/password credential with id 'docker-hub-credentials-id'
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo "Cleaning workspace and checking out code..."
-                deleteDir() // ensures workspace is empty
-                git branch: 'main', url: 'https://github.com/KushagraSaxena77/Jenkins-CICD.git'
+                echo "Checking out code..."
+                deleteDir()
+                checkout scm
+            }
+        }
+
+        stage('Set Image Tag') {
+            steps {
+                script {
+                    // Use short git SHA + build number for immutability
+                    def shortSha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.IMAGE_TAG = "${shortSha}-${env.BUILD_NUMBER}"
+                    echo "IMAGE_TAG=${env.IMAGE_TAG}"
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image..."
-                sh "docker build -t ${IMAGE_NAME}:latest ."
+                echo "Building Docker image ${IMAGE_NAME}:${IMAGE_TAG}..."
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Push Docker Image') {
             steps {
-                echo "Running Docker container..."
-                sh "docker run -d --name ${CONTAINER_NAME} -p 5000:5000 ${IMAGE_NAME}:latest"
+                echo "Pushing Docker image to ${DOCKER_REGISTRY}..."
+                sh '''
+                    echo ${DOCKER_HUB_CREDENTIALS_PSW} | docker login -u ${DOCKER_HUB_CREDENTIALS_USR} --password-stdin ${DOCKER_REGISTRY}
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker logout ${DOCKER_REGISTRY}
+                '''
             }
         }
 
-        stage('Test Container') {
+        stage('Deploy to Kubernetes') {
             steps {
-                echo "Testing Docker container..."
-                sh "curl -f http://localhost:5000 || echo 'Container test failed'"
+                echo "Deploying ${IMAGE_NAME}:${IMAGE_TAG} to Kubernetes..."
+                // Requires a Jenkins file credential containing kubeconfig with id 'kubeconfig'
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                        export KUBECONFIG=$KUBECONFIG_FILE
+                        export IMAGE_NAME='${IMAGE_NAME}'
+                        export IMAGE_TAG='${IMAGE_TAG}'
+                        # Use envsubst so deployment.yaml can include ${IMAGE_NAME}:${IMAGE_TAG}
+                        envsubst < deployment.yaml | kubectl apply -f -
+                        kubectl rollout status deployment/demo-app --timeout=120s
+                    '''
+                }
+            }
+        }
+
+        stage('Smoke Test') {
+            steps {
+                echo 'Running cluster-side smoke test'
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                        export KUBECONFIG=$KUBECONFIG_FILE
+                        # Run a temporary pod that curls the service inside the cluster
+                        kubectl run curl-test --rm --restart=Never --image=curlimages/curl --command -- curl -sS http://demo-app-svc:3000
+                    '''
+                }
             }
         }
     }
 
     post {
         always {
-            echo "Cleaning up Docker container..."
-            sh "docker rm -f ${CONTAINER_NAME} || true"
-            cleanWs()
+            echo "Pipeline finished."
+            // best-effort cleanup of dangling images on agent
+            sh 'docker image prune -f || true'
+        }
+        failure {
+            echo "Pipeline failed. Check logs for details."
         }
     }
 }

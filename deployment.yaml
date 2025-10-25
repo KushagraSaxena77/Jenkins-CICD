@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: demo-app
-        image: kushagrasaxena77/demo-app:latest
+        image: ${IMAGE_NAME}:${IMAGE_TAG}
         imagePullPolicy: IfNotPresent
         env:
         - name: APP_VERSION
