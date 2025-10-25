@@ -2,10 +2,15 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: demo-app
+<<<<<<< HEAD
   labels:
     app: demo-app
 spec:
   replicas: 1
+=======
+spec:
+  replicas: 2
+>>>>>>> 9eac8d7a082bd601510aacec7907fc0f38a7e069
   selector:
     matchLabels:
       app: demo-app
@@ -15,6 +20,7 @@ spec:
         app: demo-app
     spec:
       containers:
+<<<<<<< HEAD
         - name: demo-app
           image: ${IMAGE_NAME}:${IMAGE_TAG}
           ports:
@@ -32,12 +38,23 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
 
+=======
+      - name: demo-app
+        image: ${IMAGE_NAME}:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: APP_VERSION
+          value: "v1"
+        ports:
+        - containerPort: 3000
+>>>>>>> 9eac8d7a082bd601510aacec7907fc0f38a7e069
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: demo-app-svc
 spec:
+<<<<<<< HEAD
   selector:
     app: demo-app
   ports:
@@ -45,3 +62,12 @@ spec:
       port: 3000
       targetPort: 3000
   type: ClusterIP
+=======
+  type: NodePort
+  selector:
+    app: demo-app
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30080
+>>>>>>> 9eac8d7a082bd601510aacec7907fc0f38a7e069
