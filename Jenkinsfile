@@ -24,12 +24,14 @@ pipeline {
     stage('Set image tag') {
       steps {
         script {
-          SHORT_SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD || echo local').trim()
+          def SHORT_SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD || echo local').trim()
+          def IMAGE_TAG
           if (!params.IMAGE_TAG?.trim()) {
             IMAGE_TAG = "${SHORT_SHA}-${env.BUILD_NUMBER}"
           } else {
             IMAGE_TAG = params.IMAGE_TAG
           }
+          env.IMAGE_TAG = IMAGE_TAG
           echo "Using image: ${IMAGE_NAME}:${IMAGE_TAG}"
         }
       }
@@ -37,7 +39,7 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+        sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
       }
     }
 
